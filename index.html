@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AumiVerse - Google Drive Edition</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: {
+                            DEFAULT: "hsl(var(--primary))",
+                            foreground: "hsl(var(--primary-foreground))"
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(var(--secondary))",
+                            foreground: "hsl(var(--secondary-foreground))"
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(var(--destructive))",
+                            foreground: "hsl(var(--destructive-foreground))"
+                        },
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))"
+                        },
+                        accent: {
+                            DEFAULT: "hsl(var(--accent))",
+                            foreground: "hsl(var(--accent-foreground))"
+                        },
+                        popover: {
+                            DEFAULT: "hsl(var(--popover))",
+                            foreground: "hsl(var(--popover-foreground))"
+                        },
+                        card: {
+                            DEFAULT: "hsl(var(--card))",
+                            foreground: "hsl(var(--card-foreground))"
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-x-hidden">
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div id="app" class="flex min-h-screen relative z-10">
+        <aside id="sidebar" class="w-64 bg-black/30 backdrop-blur-2xl border-r border-white/20 p-6 flex flex-col transition-all duration-300 relative z-10">
+            <div class="flex items-center justify-between mb-8">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
+                    AumiVerse
+                </h1>
+            </div>
+
+            <div id="auth-container" class="space-y-3">
+                <button id="authorize_button" class="w-full p-3 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium">
+                    <i class="fab fa-google"></i> Sign In
+                 </button>
+                <button id="signout_button" class="w-full p-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all font-medium hidden">
+                    Sign Out
+                 </button>
+            </div>
+            <p id="auth-status" class="text-xs text-center text-gray-400 mt-2"></p>
+
+            <div class="flex-1"></div>
+            <div class="space-y-3 mt-auto">
+                <button class="w-full p-3 border border-white/20 rounded-lg bg-transparent text-white hover:bg-white/10 hover:border-white/30 transition-all text-left" onclick="window.open('https://chat.openai.com', '_blank')">🤖 ChatGPT</button>
+                <button class="w-full p-3 border border-white/20 rounded-lg bg-transparent text-white hover:bg-white/10 hover:border-white/30 transition-all text-left" onclick="window.open('https://classroom.google.com', '_blank')">📚 Google Classroom</button>
+            </div>
+        </aside>
+
+        <main id="main-content" class="flex-1 p-6 overflow-y-auto relative z-10 hidden">
+            <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <div class="relative flex-1 max-w-md">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="search-input" placeholder="Search files..." class="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all">
+                </div>
+            </header>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-semibold mb-4 text-white">
+                    Your Drive Folders
+                </h2>
+                <div id="folders-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                </div>
+            </div>
+        </main>
+        <div id="pre-auth-view" class="flex-1 flex flex-col items-center justify-center text-center p-6">
+            <i class="fab fa-google-drive text-6xl text-gray-500 mb-4"></i>
+            <h2 class="text-2xl font-bold text-white">Connect to Google Drive</h2>
+            <p class="text-gray-400 mt-2">Please sign in with your Google account to access your AumiVerse folders.</p>
+            <div id="loading-spinner" class="mt-4 hidden"><i class="fas fa-spinner fa-spin text-3xl text-purple-400"></i></div>
+        </div>
+    </div>
+
+    <div id="folder-modal" class="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="flex justify-between items-start p-6 border-b border-slate-600">
+                <h2 id="folder-title" class="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-1"></h2>
+                <button id="close-folder" class="px-6 py-3 bg-transparent border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/10 transition-all">Close</button>
+            </div>
+            <div class="p-6 border-b border-slate-600">
+                <input type="file" id="file-upload" class="hidden">
+                <button id="upload-btn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-medium">
+                    <i class="fas fa-upload"></i> Upload File to this Folder
+                </button>
+            </div>
+            <div id="folder-files" class="p-6 flex-1 min-h-[300px]">
+                <div id="empty-state" class="text-center py-12">
+                    <i class="fas fa-box-open text-6xl text-gray-400 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-white mb-2">This folder is empty</h3>
+                    <p class="text-gray-400 mb-2">Upload a file to get started.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="unlock-modal" class="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl w-full max-w-md">
+            <div class="p-6 border-b border-slate-600">
+                <h3 id="unlock-title" class="text-xl text-cyan-400 font-semibold flex items-center gap-2">
+                    🔐 Unlock Slot - F1
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-300 mb-4">This slot is protected. Please enter the password.</p>
+                <div class="bg-yellow-900/50 border border-yellow-700 text-yellow-300 p-4 rounded-md mb-6 text-center">
+                    To get the key/password for a folder, please contact
+                    <a href="mailto:ommane242@gmail.com" class="font-bold underline">ommane242@gmail.com</a>.
+                </div>
+                <form id="unlock-form">
+                    <div class="mb-4">
+                        <label for="unlock-password" class="block text-sm font-medium mb-2 text-white">Enter slot password</label>
+                        <input type="password" id="unlock-password" placeholder="Enter slot password" required class="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium">
+                            🔓 Unlock Slot
+                        </button>
+                        <button type="button" id="cancel-unlock" class="px-4 py-2 bg-transparent border border-slate-600 text-white hover:bg-slate-600 rounded-lg transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
